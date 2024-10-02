@@ -13,9 +13,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 data_1_path = os.path.join(current_dir, '..', 'data', 'day.csv')
 data_2_path = os.path.join(current_dir, '..', 'data', 'hour.csv')
 
-# Debugging: Print the paths to verify if they are correct
-st.write("Path to data_1.csv:", os.path.abspath(data_1_path))
-st.write("Path to data_2.csv:", os.path.abspath(data_2_path))
+# Debugging: Print the paths to verify if they are correct (will be visible only in the terminal/console)
+print("Path to data_1.csv:", os.path.abspath(data_1_path))
+print("Path to data_2.csv:", os.path.abspath(data_2_path))
 
 # Verify if the files exist
 if not os.path.exists(data_1_path):
