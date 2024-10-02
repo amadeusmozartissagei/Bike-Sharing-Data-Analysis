@@ -13,3 +13,8 @@ This project analyzes bike sharing data using two main approaches:
 - `notebook.ipynb`: Contains the analysis code and visualizations.
 - `dashboard.py`: Streamlit dashboard for interactive visualizations.
 - `requirements.txt`: List of required Python libraries.
+
+### © Copyright
+- **Name:** Hamza Pratama
+- **Email:** [hamzapratama000@gmail.com](mailto:hamzapratama000@gmail.com)
+- **ID Dicoding:** hamzaapratama
