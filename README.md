@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Bike Sharing Dashboard
 
 ## Description
@@ -13,3 +14,20 @@ This project analyzes bike sharing data using two main approaches:
 - `notebook.ipynb`: Contains the analysis code and visualizations.
 - `dashboard.py`: Streamlit dashboard for interactive visualizations.
 - `requirements.txt`: List of required Python libraries.
+=======
+# Bike Sharing Dashboard
+
+## Description
+This project analyzes bike sharing data using two main approaches:
+1. Weather impact on bike rentals across different seasons.
+2. Bike rentals based on weekdays, weekends, and holidays.
+
+## How to Run the Dashboard
+1. Install the required libraries by running `pip install -r requirements.txt`.
+2. Run the Streamlit dashboard with: `streamlit run dashboard/dashboard.py`.
+
+## Files
+- `notebook.ipynb`: Contains the analysis code and visualizations.
+- `dashboard.py`: Streamlit dashboard for interactive visualizations.
+- `requirements.txt`: List of required Python libraries.
+>>>>>>> 9a440a6df38ca9bea3a94bae69d5320165e70995
