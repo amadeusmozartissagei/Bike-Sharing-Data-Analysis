@@ -74,3 +74,40 @@ st.markdown("""
 - **Email:** [hamzapratama000@gmail.com](mailto:hamzapratama000@gmail.com)
 - **ID Dicoding:** hamzaapratama
 """)
+
+
+# Data cleaning: checking for null values
+def check_nulls(df):
+    return df.isna().sum()
+
+# Check for duplicates
+def check_duplicates(df):
+    return df.duplicated().sum()
+
+# Descriptive statistics
+def get_statistics(df):
+    return df.describe()
+
+# Aggregation example: daily count of users based on the season
+def aggregate_day_data(df):
+    return df.groupby('season').agg({'cnt': 'sum'})
+
+# Example function calls in Streamlit app
+if os.path.exists(data_1_path) and os.path.exists(data_2_path):
+    st.header("Additional Data Analysis")
+
+    # Null value check
+    st.subheader("Checking null values in day and hour data:")
+    st.write(check_nulls(day_df), check_nulls(hour_df))
+    
+    # Duplicate check
+    st.subheader("Checking duplicates in day and hour data:")
+    st.write(check_duplicates(day_df), check_duplicates(hour_df))
+    
+    # Descriptive statistics
+    st.subheader("Descriptive statistics for day data:")
+    st.write(get_statistics(day_df))
+    
+    # Aggregation example
+    st.subheader("Aggregation of users count by season:")
+    st.write(aggregate_day_data(day_df))
