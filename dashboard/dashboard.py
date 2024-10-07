@@ -1,106 +1,157 @@
-import streamlit as st
+# File: bike_sharing_dashboard.py
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
 import numpy as np
+import os
+from datetime import datetime
 
-# Set up the dashboard title
-st.title("RFM Analysis Dashboard with Bike Sharing Visualizations")
+# Set a modern, vibrant plot style
+sns.set(style='whitegrid')
 
-# Cache the data loading function to optimize performance
-@st.cache_data
-def load_rfm_data():
-    # Example RFM dataset (replace this with your actual RFM data loading logic)
-    data = pd.DataFrame({
-        'recency': [10, 20, 30, 40],
-        'monetary': [100, 200, 300, 400],
-        'frequency': [1, 2, 3, 4]
-    })
-    return data
+# Using absolute path for data location
+current_dir = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.join(current_dir, "main_data.csv")
 
-# Load your RFM data
-rfm_data = load_rfm_data()
+# Load datasets
+day_df = pd.read_csv(data_path)
 
-# Display the RFM data in the dashboard
-st.subheader("RFM Analysis Data")
-st.write(rfm_data)
+# Data preprocessing
+day_df.rename(columns={
+    'dteday': 'dateday',
+    'yr': 'year',
+    'mnth': 'month',
+    'weathersit': 'weather',
+    'cnt': 'count'
+}, inplace=True)
 
-# Cache the bike-sharing data loading function
-@st.cache_data
-def load_bike_data():
-    np.random.seed(42)
-    # Generate data for two years, 2011 and 2012
-    dates = pd.date_range(start="2011-01-01", end="2012-12-31", freq='D')
-    n = len(dates)
-    
-    # Sample data fields
-    data = {
-        'date': dates,
-        'season': np.random.choice(['Spring', 'Summer', 'Fall', 'Winter'], n),
-        'weather': np.random.choice(['Clear', 'Cloudy', 'Rainy', 'Snowy'], n),
-        'bike_rentals': np.random.poisson(lam=200, size=n),
-    }
+day_df['month'] = day_df['month'].map({
+    1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun',
+    7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'
+})
+day_df['season'] = day_df['season'].map({
+    1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'
+})
+day_df['weather'] = day_df['weather'].map({
+    1: 'Clear/Partly Cloudy',
+    2: 'Misty/Cloudy',
+    3: 'Light Snow/Rain',
+    4: 'Severe Weather'
+})
 
-    df = pd.DataFrame(data)
-    
-    # Adjust some patterns to simulate seasonal effects
-    df.loc[df['season'] == 'Winter', 'bike_rentals'] = df.loc[df['season'] == 'Winter', 'bike_rentals'] * 0.5
-    df.loc[df['season'] == 'Summer', 'bike_rentals'] = df.loc[df['season'] == 'Summer', 'bike_rentals'] * 1.5
-    
-    return df
+# Convert 'dateday' to datetime
+day_df['dateday'] = pd.to_datetime(day_df['dateday'])
+day_df['season'] = day_df['season'].astype('category')
+day_df['year'] = day_df['year'].astype('category')
+day_df['month'] = day_df['month'].astype('category')
+day_df['weather'] = day_df['weather'].astype('category')
 
-# Load the bike-sharing data
-bike_data = load_bike_data()
+# RFM Analysis
+latest_date = day_df['dateday'].max()
+day_df['days_since_last_rental'] = (latest_date - day_df['dateday']).dt.days
 
-# Sidebar for filtering bike-sharing data
-st.sidebar.header("Bike Sharing Filters")
-year_selected = st.sidebar.slider('Select Year', 2011, 2012, (2011, 2012))
-season_selected = st.sidebar.multiselect('Select Seasons', options=['Spring', 'Summer', 'Fall', 'Winter'], default=['Spring', 'Summer', 'Fall', 'Winter'])
-weather_selected = st.sidebar.multiselect('Select Weather Conditions', options=['Clear', 'Cloudy', 'Rainy', 'Snowy'], default=['Clear', 'Cloudy', 'Rainy', 'Snowy'])
+# Frequency (rentals per month)
+day_df['month_year'] = day_df['dateday'].dt.to_period('M')
+frequency_df = day_df.groupby('month_year')['count'].count().reset_index()
 
-# Filter bike-sharing data based on the sidebar selections
-filtered_bike_data = bike_data[(bike_data['date'].dt.year >= year_selected[0]) & (bike_data['date'].dt.year <= year_selected[1])]
-filtered_bike_data = filtered_bike_data[filtered_bike_data['season'].isin(season_selected)]
-filtered_bike_data = filtered_bike_data[filtered_bike_data['weather'].isin(weather_selected)]
+# Monetary (total rentals per day)
+monetary_df = day_df.groupby('dateday')['count'].sum().reset_index()
 
-# Display the filtered bike-sharing data
-st.subheader(f"Bike Sharing Data (from {year_selected[0]} to {year_selected[1]})")
-st.write(filtered_bike_data.head())
+# Combine RFM data
+rfm_df = day_df[['dateday', 'days_since_last_rental', 'count']].copy()
+rfm_df = rfm_df.groupby('dateday').agg({
+    'days_since_last_rental': 'min',
+    'count': ['sum', 'count']
+}).reset_index()
 
-# Visualization 1: Bike Rentals by Season
-st.subheader("Bike Rentals by Season")
-fig1, ax1 = plt.subplots(figsize=(10, 6))
-sns.boxplot(data=filtered_bike_data, x='season', y='bike_rentals', palette='coolwarm', ax=ax1)
-ax1.set_title("Bike Rentals by Season (2011-2012)")
-ax1.set_xlabel("Season")
-ax1.set_ylabel("Number of Bike Rentals")
-st.pyplot(fig1)
+rfm_df.columns = ['dateday', 'recency', 'monetary', 'frequency']
 
-# Visualization 2: Bike Rentals by Weather Conditions
-st.subheader("Bike Rentals by Weather Conditions")
-fig2, ax2 = plt.subplots(figsize=(10, 6))
-sns.boxplot(data=filtered_bike_data, x='weather', y='bike_rentals', palette='Blues', ax=ax2)
-ax2.set_title("Bike Rentals by Weather Conditions (2011-2012)")
-ax2.set_xlabel("Weather Condition")
-ax2.set_ylabel("Number of Bike Rentals")
-st.pyplot(fig2)
+# Streamlit Dashboard
+st.title("Bike Sharing Data Analysis Dashboard")
 
+# Sidebar Information
+st.sidebar.title("Information")
+st.sidebar.write("Select the date range to filter the data displayed on the dashboard.")
 
-# Conclusion section
-st.subheader("Conclusion")
+# Filter for date range
+min_date = day_df['dateday'].min().date()
+max_date = day_df['dateday'].max().date()
 
-conclusions = """
-- The best times to increase bike rentals are during the autumn and summer seasons, while specific strategies may be needed to boost usage during spring.
-- Bike rental services tend to be most popular when the weather is good, such as sunny or cloudy conditions.
-- September 2012 marks a significant peak in usage, indicating that promotional efforts during this period could enhance rentals.
-"""
+try:
+    start_date, end_date = st.sidebar.date_input(
+        "Select Date Range",
+        [min_date, max_date],
+        min_value=min_date,
+        max_value=max_date
+    )
 
-st.markdown(conclusions)
+    # Apply date filter only if both dates are selected
+    if start_date and end_date:
+        filtered_df = day_df[(day_df['dateday'] >= str(start_date)) & (day_df['dateday'] <= str(end_date))]
+    else:
+        filtered_df = day_df  # If dates are not selected, show the entire dataset
 
-# Copyright section
-st.subheader("© Copyright")
-st.markdown("""
-**Name**: Hamza Pratama  
-**Email**: hamzapratama000@gmail.com  
-**ID Dicoding**: hamzaapratama
-""")
+except ValueError:
+    st.sidebar.warning("Please select a valid date range.")
+    filtered_df = day_df  # Fallback to the entire dataset in case of invalid input
+
+# Display basic statistics
+st.header("Basic Statistics")
+st.write(filtered_df.describe())
+
+# Total Rental by Season
+st.subheader("Total Rentals by Season")
+season_usage = filtered_df.groupby('season')['count'].sum().reset_index()
+
+fig, ax = plt.subplots(figsize=(8, 6))
+sns.barplot(x='season', y='count', data=season_usage, palette='Spectral', ax=ax)  # Updated palette
+ax.set_title('Total Bike Rentals by Season', fontsize=14, fontweight='bold')
+ax.set_xlabel('Season', fontsize=12)
+ax.set_ylabel('Total Rentals', fontsize=12)
+st.pyplot(fig)
+
+# Rentals by Weather Condition
+st.subheader("Rentals by Weather Condition")
+fig, ax = plt.subplots(figsize=(8, 6))
+sns.boxplot(x='weather', y='count', data=filtered_df, palette='coolwarm', ax=ax)  # Updated palette
+ax.set_title('Box Plot: Weather vs Bike Rentals', fontsize=14, fontweight='bold')
+ax.set_xlabel('Weather Condition', fontsize=12)
+ax.set_ylabel('Total Rentals', fontsize=12)
+st.pyplot(fig)
+
+# Order months for visualization
+month_order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+day_df['month'] = pd.Categorical(day_df['month'], categories=month_order, ordered=True)
+
+# Group and calculate average bike usage per month for each year
+monthly_usage = day_df.groupby(['year', 'month'])['count'].mean().unstack()
+
+fig, ax = plt.subplots(figsize=(10, 6))
+monthly_usage.T.plot(kind='line', marker='o', linestyle='-', colormap='tab10', ax=ax)  # Updated color map
+ax.set_title('Average Monthly Bike Rentals (2011 vs 2012)', fontsize=14, fontweight='bold')
+ax.set_xlabel('Month', fontsize=12)
+ax.set_ylabel('Average Rentals', fontsize=12)
+ax.set_xticks(range(12))
+ax.set_xticklabels(monthly_usage.columns, rotation=45)
+ax.legend(title='Year')
+st.pyplot(fig)
+
+# RFM Analysis Visualization
+st.subheader("RFM Analysis: Recency vs Monetary vs Frequency")
+
+fig, ax = plt.subplots(figsize=(10, 6))
+scatter = ax.scatter(rfm_df['recency'], rfm_df['monetary'], c=rfm_df['frequency'], cmap='plasma', s=100, alpha=0.7)  # Updated color map
+plt.colorbar(scatter, ax=ax, label='Frequency')
+ax.set_title('RFM Analysis: Recency vs Monetary vs Frequency', fontsize=14, fontweight='bold')
+ax.set_xlabel('Recency (Days Since Last Rental)', fontsize=12)
+ax.set_ylabel('Monetary (Total Rentals)', fontsize=12)
+st.pyplot(fig)
+
+# Copyright Information
+st.sidebar.markdown("---")
+st.sidebar.text("© 2024 Hamza Pratama")
+st.sidebar.text("Name: Hamza Pratama")
+st.sidebar.text("Email: hamzapratama000@gmail.com")
+st.sidebar.text("ID Dicoding: hamzaapratama")

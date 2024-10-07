@@ -56,6 +56,7 @@ All dependencies are listed in the `requirements.txt` file. Main libraries used:
 - `matplotlib`
 - `seaborn`
 - `streamlit`
+- `datetime`
 
 
 ---
